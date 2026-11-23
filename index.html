@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Facilita ai - Serviços e Profissionais Próximos</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+  <link rel="stylesheet" href="assets/css/styles.css">
+</head>
+<body>
+
+  <!-- In-Page Toast Notification (Safe in sandboxed iframes) -->
+  <div id="toastContainer" class="toast-container">
+    <div class="toast-card">
+      <div class="toast-icon">✓</div>
+      <div id="toastText">Mensagem</div>
+    </div>
+  </div>
+
+  <div class="app-root">
+
+    <!-- Header -->
+    <header class="header">
+      <div class="header-inner">
+        <div class="logo-container" onclick="showTab('inicio')">
+          <div class="logo-badge">✓</div>
+          <div>
+            <div class="logo-title">Facilita <span>ai</span></div>
+            <div class="logo-sub">Serviços & Profissionais Próximos</div>
+          </div>
+        </div>
+
+        <!-- Desktop Navigation -->
+        <nav class="nav-desktop">
+          <button class="nav-btn active" id="tab-btn-inicio" onclick="showTab('inicio')">Início</button>
+          <button class="nav-btn" id="tab-btn-profissionais" onclick="showTab('profissionais')">Profissionais</button>
+          <button class="nav-btn" id="tab-btn-cadastre" onclick="showTab('cadastre')">Cadastrar</button>
+          <button class="nav-btn" id="tab-btn-como" onclick="showTab('como')">Como Funciona</button>
+          <button class="btn-register-top" onclick="showTab('cadastre')">+ Anunciar Grátis</button>
+        </nav>
+
+        <!-- Mobile Menu Toggle Button -->
+        <button class="mobile-menu-toggle" id="mobileMenuBtn" onclick="toggleMobileMenu()">☰</button>
+      </div>
+
+      <!-- Mobile Dropdown Menu -->
+      <div class="mobile-dropdown" id="mobileDropdown">
+        <button class="nav-btn" onclick="showTab('inicio'); toggleMobileMenu(false);">📍 Início / Mapa</button>
+        <button class="nav-btn" onclick="showTab('profissionais'); toggleMobileMenu(false);">👥 Catálogo de Profissionais</button>
+        <button class="nav-btn" onclick="showTab('cadastre'); toggleMobileMenu(false);">📝 Cadastrar Meu Serviço</button>
+        <button class="nav-btn" onclick="showTab('como'); toggleMobileMenu(false);">ℹ️ Como Funciona</button>
+        <button class="btn-register-top" onclick="showTab('cadastre'); toggleMobileMenu(false);">+ Anunciar Grátis</button>
+      </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="location-banner" id="loc-banner">
+        <span>📍 Localização:</span> <strong id="loc-text">Detectando sua posição...</strong>
+      </div>
+      <h1>Precisa de um serviço?<br>O <span>Facilita ai</span> resolve para você!</h1>
+      <p>Encontre profissionais no raio de quilômetros da sua casa. Assistência técnica, lavanderia, confeitaria, eletricista, guincho e muito mais.</p>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Buscar profissional ou serviço... Ex: eletricista, celular, bolo" oninput="handleSearch()">
+        <button onclick="handleSearch()">Buscar</button>
+      </div>
+    </section>
+
+    <!-- Main Views Container -->
+    <main class="container">
+
+      <!-- TAB 1: INÍCIO (Mapa no topo + Cadastro na home + Destaques) -->
+      <div id="view-inicio">
+        
+        <!-- Interactive Radius Map Section at Top of Homepage -->
+        <div class="map-card">
+          <div class="map-header">
+            <div class="map-title-box">
+              <h3>🎯 Mapa de Profissionais Próximos</h3>
+              <span>Marcadores em tempo real baseados na sua localização</span>
+            </div>
+            <div class="radius-btns">
+              <button class="radius-btn" onclick="setRadius(5)">5 km</button>
+              <button class="radius-btn" onclick="setRadius(10)">10 km</button>
+              <button class="radius-btn active" onclick="setRadius(25)">25 km</button>
+              <button class="radius-btn" onclick="setRadius(50)">50 km</button>
+              <button class="radius-btn" onclick="setRadius(999)">Todos</button>
+            </div>
+          </div>
+
+          <div class="map-canvas" id="mapCanvas" role="region" aria-label="Mapa de profissionais próximos"></div>
+        </div>
+
+        <!-- Category Filter Pills -->
+        <div class="cat-bar">
+          <button class="cat-pill active" onclick="filterCategory('todos')">Todos os Serviços</button>
+          <button class="cat-pill" onclick="filterCategory('assistencia-tecnica')">💻 Assistência Técnica</button>
+          <button class="cat-pill" onclick="filterCategory('lavanderia')">👕 Lavanderia</button>
+          <button class="cat-pill" onclick="filterCategory('confeitaria-decoradores')">🎂 Confeitaria / Decoração</button>
+          <button class="cat-pill" onclick="filterCategory('eletricista')">⚡ Eletricista</button>
+          <button class="cat-pill" onclick="filterCategory('encanador')">🔧 Encanador</button>
+          <button class="cat-pill" onclick="filterCategory('chaveiro')">🔑 Chaveiro 24h</button>
+          <button class="cat-pill" onclick="filterCategory('mecanico')">🚗 Mecânico</button>
+          <button class="cat-pill" onclick="filterCategory('guincho')">🚚 Guincho</button>
+          <button class="cat-pill" onclick="filterCategory('gas')">🔥 Gás e Água</button>
+          <button class="cat-pill" onclick="filterCategory('outros')">📌 Outros</button>
+        </div>
+
+        <div class="results-summary" id="resultsSummary" aria-live="polite"></div>
+
+        <!-- Services Cards Grid -->
+        <div class="grid" id="servicesGrid"></div>
+
+        <!-- Pagination -->
+        <div class="pagination" id="paginationControls"></div>
+
+        <!-- Formulário de cadastro na página inicial -->
+        <div class="register-box">
+          <div class="register-header">
+            <h3>⚡ Cadastre seu Serviço no Facilita ai</h3>
+            <p>Seja encontrado por clientes próximos. O cadastro é rápido e gratuito.</p>
+          </div>
+
+          <form onsubmit="handleRegisterSubmit(event, 'home')">
+            <div class="form-grid">
+              <div class="form-full">
+                <label class="form-label">Nome do Profissional ou Empresa *</label>
+                <input type="text" class="form-input" id="reg-name" required placeholder="Ex: Carlos Eletricista, Oficina Central, Doces & Festas...">
+              </div>
+
+              <div class="form-full">
+                <label class="form-label">Categoria do Serviço *</label>
+                <select class="form-input" id="reg-category" required>
+                  <option value="" selected disabled>Selecione uma categoria</option>
+                  <option value="assistencia-tecnica">💻 Assistência Técnica</option>
+                  <option value="lavanderia">👕 Lavanderia</option>
+                  <option value="confeitaria-decoradores">🎂 Confeitaria / Decoração</option>
+                  <option value="eletricista">⚡ Eletricista</option>
+                  <option value="encanador">🔧 Encanador</option>
+                  <option value="chaveiro">🔑 Chaveiro 24h</option>
+                  <option value="mecanico">🚗 Mecânico</option>
+                  <option value="guincho">🚚 Guincho</option>
+                  <option value="gas">🔥 Gás e Água</option>
+                  <option value="outros">📌 Outros</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="form-label">Telefone Principal *</label>
+                <input type="tel" class="form-input" id="reg-phone" required placeholder="Ex: (86) 99876-5432" inputmode="numeric" autocomplete="tel" maxlength="15">
+              </div>
+
+              <div>
+                <label class="form-label">WhatsApp (para mensagens)</label>
+                <input type="tel" class="form-input" id="reg-wpp" placeholder="Ex: (86) 99876-5432" inputmode="numeric" autocomplete="tel" maxlength="15">
+              </div>
+
+              <div>
+                <label class="form-label">CEP *</label>
+                <input type="text" class="form-input cep-input" id="reg-cep" required placeholder="00000-000" inputmode="numeric" autocomplete="postal-code" maxlength="9" pattern="[0-9]{5}-[0-9]{3}" data-prefix="reg-">
+                <small class="field-hint" id="reg-cep-status">Digite o CEP para preencher o endereço.</small>
+              </div>
+
+              <div>
+                <label class="form-label">Número *</label>
+                <input type="text" class="form-input" id="reg-number" required placeholder="Ex: 125">
+              </div>
+
+              <div class="form-full">
+                <label class="form-label">Logradouro *</label>
+                <input type="text" class="form-input" id="reg-street" required placeholder="Rua, avenida ou travessa" autocomplete="address-line1">
+              </div>
+
+              <div>
+                <label class="form-label">Complemento</label>
+                <input type="text" class="form-input" id="reg-complement" placeholder="Apto, sala, bloco..." autocomplete="address-line2">
+              </div>
+
+              <div>
+                <label class="form-label">Bairro *</label>
+                <input type="text" class="form-input" id="reg-neighborhood" required placeholder="Ex: Centro">
+              </div>
+
+              <div>
+                <label class="form-label">Cidade *</label>
+                <input type="text" class="form-input" id="reg-city" required placeholder="Ex: Teresina" autocomplete="address-level2">
+              </div>
+
+              <div>
+                <label class="form-label">UF *</label>
+                <input type="text" class="form-input state-input" id="reg-state" required placeholder="PI" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="address-level1">
+              </div>
+
+              <input type="hidden" id="reg-latitude">
+              <input type="hidden" id="reg-longitude">
+
+              <div class="form-full">
+                <label class="form-label">Descrição dos Serviços e Diferenciais</label>
+                <textarea class="form-input form-textarea" id="reg-desc" rows="4" minlength="20" maxlength="500" required placeholder="Ex: Atendimento no local, consertos rápidos, aceitamos cartões e Pix..."></textarea>
+              </div>
+
+              <div class="form-full consent-field">
+                <input type="checkbox" id="reg-consent" required>
+                <label for="reg-consent">Autorizo a publicação dos dados informados para que clientes possam encontrar e entrar em contato com este serviço.</label>
+              </div>
+
+              <div class="form-full">
+                <button type="submit" class="btn-submit">Cadastrar Serviço</button>
+              </div>
+            </div>
+          </form>
+        </div>
+
+      </div>
+
+      <!-- TAB 2: PROFISSIONAIS (Página com listagem paginada) -->
+      <div id="view-profissionais" class="hidden">
+        <div style="margin: 20px 0 14px;">
+          <h2 style="font-size: 1.35rem; font-weight: 900;">Catálogo Completo de Profissionais</h2>
+          <p style="font-size: 0.8rem; color: #64748b;">Navegue por páginas e encontre o profissional ideal para sua necessidade.</p>
+        </div>
+        <div class="grid" id="fullServicesGrid"></div>
+        <div class="pagination" id="fullPaginationControls"></div>
+      </div>
+
+      <!-- TAB 3: CADASTRE SEU SERVIÇO (Página dedicada) -->
+      <div id="view-cadastre" class="hidden">
+        <div class="register-box" style="margin-top: 20px;">
+          <div class="register-header">
+            <h3>Cadastre seu Serviço no Facilita ai</h3>
+            <p>Preencha os dados abaixo para divulgar seu serviço.</p>
+          </div>
+          <form onsubmit="handleRegisterSubmit(event, 'page')">
+            <div class="form-grid">
+              <div class="form-full">
+                <label class="form-label">Nome do Profissional / Empresa *</label>
+                <input type="text" class="form-input" id="page-reg-name" required placeholder="Ex: Assistência Técnica Express">
+              </div>
+              <div class="form-full">
+                <label class="form-label">Categoria do Serviço *</label>
+                <select class="form-input" id="page-reg-category" required>
+                  <option value="" selected disabled>Selecione uma categoria</option>
+                  <option value="assistencia-tecnica">💻 Assistência Técnica</option>
+                  <option value="lavanderia">👕 Lavanderia</option>
+                  <option value="confeitaria-decoradores">🎂 Confeitaria / Decoração</option>
+                  <option value="eletricista">⚡ Eletricista</option>
+                  <option value="encanador">🔧 Encanador</option>
+                  <option value="chaveiro">🔑 Chaveiro 24h</option>
+                  <option value="mecanico">🚗 Mecânico</option>
+                  <option value="guincho">🚚 Guincho</option>
+                  <option value="gas">🔥 Gás e Água</option>
+                  <option value="outros">📌 Outros</option>
+                </select>
+              </div>
+              <div>
+                <label class="form-label">Telefone para Ligações *</label>
+                <input type="tel" class="form-input" id="page-reg-phone" required placeholder="Ex: (86) 99876-5432" inputmode="numeric" autocomplete="tel" maxlength="15">
+              </div>
+              <div>
+                <label class="form-label">WhatsApp (opcional)</label>
+                <input type="tel" class="form-input" id="page-reg-wpp" placeholder="Ex: (86) 99876-5432" inputmode="numeric" autocomplete="tel" maxlength="15">
+              </div>
+              <div>
+                <label class="form-label">CEP *</label>
+                <input type="text" class="form-input cep-input" id="page-reg-cep" required placeholder="00000-000" inputmode="numeric" autocomplete="postal-code" maxlength="9" pattern="[0-9]{5}-[0-9]{3}" data-prefix="page-reg-">
+                <small class="field-hint" id="page-reg-cep-status">Digite o CEP para preencher o endereço.</small>
+              </div>
+              <div>
+                <label class="form-label">Número *</label>
+                <input type="text" class="form-input" id="page-reg-number" required placeholder="Ex: 125">
+              </div>
+              <div class="form-full">
+                <label class="form-label">Logradouro *</label>
+                <input type="text" class="form-input" id="page-reg-street" required placeholder="Rua, avenida ou travessa" autocomplete="address-line1">
+              </div>
+              <div>
+                <label class="form-label">Complemento</label>
+                <input type="text" class="form-input" id="page-reg-complement" placeholder="Apto, sala, bloco..." autocomplete="address-line2">
+              </div>
+              <div>
+                <label class="form-label">Bairro *</label>
+                <input type="text" class="form-input" id="page-reg-neighborhood" required placeholder="Ex: Centro">
+              </div>
+              <div>
+                <label class="form-label">Cidade *</label>
+                <input type="text" class="form-input" id="page-reg-city" required placeholder="Ex: Teresina" autocomplete="address-level2">
+              </div>
+              <div>
+                <label class="form-label">UF *</label>
+                <input type="text" class="form-input state-input" id="page-reg-state" required placeholder="PI" maxlength="2" pattern="[A-Za-z]{2}" autocomplete="address-level1">
+              </div>
+              <input type="hidden" id="page-reg-latitude">
+              <input type="hidden" id="page-reg-longitude">
+              <div class="form-full">
+                <label class="form-label">Descrição</label>
+                <textarea class="form-input form-textarea" id="page-reg-desc" rows="4" minlength="20" maxlength="500" required placeholder="Detalhes dos serviços prestados"></textarea>
+              </div>
+              <div class="form-full consent-field">
+                <input type="checkbox" id="page-reg-consent" required>
+                <label for="page-reg-consent">Autorizo a publicação dos dados informados para que clientes possam encontrar e entrar em contato com este serviço.</label>
+              </div>
+              <div class="form-full">
+                <button type="submit" class="btn-submit">Cadastrar Serviço</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- TAB 4: COMO FUNCIONA -->
+      <div id="view-como" class="hidden" style="padding: 20px 0;">
+        <div style="background: white; border-radius: var(--radius); padding: 22px; border: 1px solid var(--border);">
+          <h2 style="font-size: 1.35rem; font-weight: 900; margin-bottom: 12px;">Como Funciona o Facilita ai</h2>
+          <p style="color: #64748b; font-size: 0.85rem; margin-bottom: 18px; line-height: 1.6;">
+            1. <strong>Localização:</strong> O Facilita ai detecta sua localização para calcular a distância exata até cada profissional.<br><br>
+            2. <strong>Mapa e Raio:</strong> Veja no mapa os prestadores a 5, 10, 25 ou 50 km de você.<br><br>
+            3. <strong>Contato Direto:</strong> Fale direto pelo WhatsApp ou ligue sem pagar nenhuma taxa ou comissão.<br><br>
+            4. <strong>Avaliações:</strong> Consulte experiências de outros clientes e compartilhe seu feedback após o atendimento.
+          </p>
+          <button class="btn-submit" style="max-width: 200px;" onclick="showTab('inicio')">Voltar ao Mapa</button>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>© 2026 Facilita ai • Conectando clientes e profissionais perto de você.</p>
+    </footer>
+
+  </div>
+
+  <!-- Avaliações dos profissionais -->
+  <div id="reviewsModal" class="reviews-modal hidden" role="dialog" aria-modal="true" aria-labelledby="reviewsModalTitle" onclick="handleReviewsBackdrop(event)">
+    <div class="reviews-dialog">
+      <div class="reviews-header">
+        <div>
+          <h2 id="reviewsModalTitle">Avaliações do profissional</h2>
+          <p id="reviewsModalSummary">Ainda não há avaliações.</p>
+        </div>
+        <button type="button" class="reviews-close" id="reviewsCloseButton" onclick="closeReviews()" aria-label="Fechar avaliações">✕</button>
+      </div>
+
+      <div id="reviewsList" class="reviews-list"></div>
+
+      <form id="reviewForm" class="review-form" onsubmit="handleReviewSubmit(event)">
+        <h3>Conte como foi sua experiência</h3>
+        <div class="review-form-grid">
+          <div>
+            <label class="form-label" for="reviewName">Seu nome *</label>
+            <input type="text" class="form-input" id="reviewName" required minlength="2" maxlength="60" placeholder="Ex: Maria Silva">
+          </div>
+          <fieldset class="rating-field">
+            <legend class="form-label">Sua nota *</legend>
+            <div class="star-rating">
+              <input type="radio" name="review-rating" id="rating-5" value="5" required><label for="rating-5" title="5 estrelas">★</label>
+              <input type="radio" name="review-rating" id="rating-4" value="4"><label for="rating-4" title="4 estrelas">★</label>
+              <input type="radio" name="review-rating" id="rating-3" value="3"><label for="rating-3" title="3 estrelas">★</label>
+              <input type="radio" name="review-rating" id="rating-2" value="2"><label for="rating-2" title="2 estrelas">★</label>
+              <input type="radio" name="review-rating" id="rating-1" value="1"><label for="rating-1" title="1 estrela">★</label>
+            </div>
+          </fieldset>
+        </div>
+        <div>
+          <label class="form-label" for="reviewComment">Comentário *</label>
+          <textarea class="form-input form-textarea review-comment" id="reviewComment" required minlength="10" maxlength="500" rows="3" placeholder="Conte o que achou do atendimento e do serviço realizado."></textarea>
+        </div>
+        <button type="submit" class="btn-submit">Enviar Avaliação</button>
+      </form>
+
+      <div id="reviewAlreadyMessage" class="review-already hidden">Você já avaliou este profissional neste navegador.</div>
+    </div>
+  </div>
+
+  <!-- App modules: dependencies must load in this order -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script type="module" src="assets/js/firebase-config.js"></script>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+</body>
+</html>
